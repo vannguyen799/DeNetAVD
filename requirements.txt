@@ -1,0 +1,5 @@
+keyboard~=0.13.5
+gspread~=6.1.4
+Appium-Python-Client~=4.5.0
+selenium~=4.28.1
+oauth2client~=4.1.3

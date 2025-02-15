@@ -1,0 +1,17 @@
+--1 Install Android Studio
+
+--2 Install Appium 2
+npm i -g appium
+appium driver install uiautomator2
+
+--3 accounts.txt Format
+private_key:password:pin_code
+
+--4 Run Appium
+appium
+
+--5 Run DeNet
+py -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+py DeNet.py
