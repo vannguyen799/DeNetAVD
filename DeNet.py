@@ -257,6 +257,7 @@ class DeNetTool:
             print(f"Tài Khoản Đã Turn On {account} ")
             with open(os.path.join(LOG_PATH, f'{avd_name_from_acc(account)}_last_log.txt'), 'a') as file:
                 file.write(f"OK")
+            save_last_timestamp(account, time.time())
 
         except Exception as e:
             print(f"Lỗi với tài khoản {account}: {e}")
@@ -357,8 +358,6 @@ def run_tool(accounts):
                     denet.account = account
                     try:
                         denet.setUp()
-                        save_last_timestamp(account, time.time())
-
                         denet.test_open_tiktok()
                     except Exception as e:
                         logging.error(f'DeNetTool err: {account} {e}')
@@ -367,7 +366,7 @@ def run_tool(accounts):
                 except Exception as e:
                     logging.error(f'Account err: {account} {e}')
                 logging.info(f"Done in {int((time.time() - now) / 60)} minutes.")
-            time.sleep(5)  # small sleep for prev close android timeout
+                time.sleep(5)  # small sleep for prev close android timeout
 
         logging.info(f"Waiting for {SLEEP_CHECK} seconds...")
         time.sleep(SLEEP_CHECK)
