@@ -26,9 +26,10 @@ APPIUM_SERVER_URL = 'http://127.0.0.1:4723'
 DEFAULT_ELEMENT_TIMEOUT = 200
 ACCOUNT_CLAIM_SLEEP = 60 * 60 * 6  # 6 HOUR
 SLEEP_CHECK = 30 * 60  # 30 MIN
-ANDROID_RAM = 4  # GB
-ANDROID_CORES = 2
+ANDROID_RAM = 8  # GB
+ANDROID_CORES = 4
 ONE_DEVICE_MODE = False
+ANDROID_BOOT_TIMEOUT = 300
 ##########################################################
 
 account_processing_in4: dict[str, int] = {}  # list(account, last_process_time) )
@@ -79,7 +80,7 @@ def load_device_by_account(account: str):
 
     avd_name = avd_name_from_acc(account)
     clone_device(avd_name, src_avd_path=DEFAULT_ANDROID_AVD, target=ANDROID_TARGET)
-    return boot_device(avd_name,memory=int(ANDROID_RAM * 1024), cores=ANDROID_CORES)
+    return boot_device(avd_name,memory=int(ANDROID_RAM * 1024), cores=ANDROID_CORES, timeout=ANDROID_BOOT_TIMEOUT)
 
 
 class DeNetTool:

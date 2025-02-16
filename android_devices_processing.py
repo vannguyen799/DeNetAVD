@@ -82,7 +82,7 @@ def close_android(device_name):
     time.sleep(1)
 
 
-def boot_device(avd_name, port=None, no_window=False, memory=4096, cores=2):
+def boot_device(avd_name, port=None, no_window=False, memory=4096, cores=2, timeout=300):
     """
     Boot android device
 
@@ -96,7 +96,7 @@ def boot_device(avd_name, port=None, no_window=False, memory=4096, cores=2):
     # os.system(cmd)
     subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     e_name = 'emulator-' + str(port)
-    wait_for_emulator(e_name)
+    wait_for_emulator(e_name, timeout)
 
     try:
         subprocess.Popen([ADB, "-s", e_name, "shell", "settings", "put", "global", "window_animation_scale", "0"])
@@ -107,19 +107,21 @@ def boot_device(avd_name, port=None, no_window=False, memory=4096, cores=2):
     return e_name
 
 
-def wait_for_emulator(emulator_name):
+def wait_for_emulator(emulator_name, timeout=300):
     logging.info(f"Waiting for {emulator_name} to be ready...")
 
     subprocess.run([ADB, "wait-for-device"])
-
-    while True:
+    start_at = time.time()
+    while time.time() - start_at < timeout:
         result = subprocess.run([ADB, "-s", emulator_name, "shell", "getprop", "sys.boot_completed"],
                                 capture_output=True, text=True)
         if result.returncode == 0 and result.stdout.strip() == "1":
             logging.info(f"{emulator_name} is ready!")
-            break
+            return
         logging.debug(f"Waiting for {emulator_name} to boot...")
         time.sleep(2)
+
+    raise TimeoutError(f"Timed out waiting for {emulator_name} to boot.")
 
 
 def select_available_port():
