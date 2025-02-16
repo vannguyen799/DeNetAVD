@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 import pathlib
 import shutil
 import subprocess
@@ -7,9 +7,10 @@ import time
 
 HOME = str(pathlib.Path.home())
 ANDROID_HOME = os.path.join(HOME, 'AppData/Local/Android/Sdk')
-ADB = '"' + os.path.join(ANDROID_HOME, 'platform-tools/adb.exe')+'"'
-EMULATOR = '"' + os.path.join(ANDROID_HOME, 'emulator/emulator.exe') +'"'
+ADB = '"' + os.path.join(ANDROID_HOME, 'platform-tools/adb.exe') + '"'
+EMULATOR = '"' + os.path.join(ANDROID_HOME, 'emulator/emulator.exe') + '"'
 AVD_PATH = os.path.join(HOME, '.android/avd')
+
 
 # print(f'ANDROID_HOME: {ANDROID_HOME}')
 # print(f'ADB: {ADB}')
@@ -18,7 +19,6 @@ AVD_PATH = os.path.join(HOME, '.android/avd')
 
 
 def clone_device(avd_name, src_avd_path='./resources/denet.avd', target='android-28'):
-
     clone_avd_path = f'./devices/{avd_name}'
     logging.info(f'Cloning device ---- {avd_name} --- ...')
 
@@ -48,8 +48,6 @@ target={target}
     if f'path={os.path.abspath(clone_avd_path)}' not in existing_content:
         with open(avd_ini_path, 'w') as f:
             f.write(new_init_content)
-
-
 
     logging.info(f'Cloning done --- {avd_name}')
 
@@ -87,7 +85,8 @@ def close_android(device_name):
     time.sleep(1)
 
 
-def boot_device(avd_name, port=None, no_window=False, memory=4096, cores=2, timeout=300):
+def boot_device(avd_name, port=None, no_window=False, memory=4096, cores=2, no_snapshot=False, no_snapshot_load=True,
+                timeout=300):
     """
     Boot android device
 
@@ -96,9 +95,13 @@ def boot_device(avd_name, port=None, no_window=False, memory=4096, cores=2, time
     logging.info(f"Booting {avd_name}...")
     if port is None:
         port = select_available_port()
-    cmd = f"{EMULATOR} -avd {avd_name} -memory {memory} -cores {cores} -port {port} -gpu host -no-boot-anim" #-no-snapshot
+    cmd = f"{EMULATOR} -avd {avd_name} -memory {memory} -cores {cores} -port {port} -gpu host -no-boot-anim"  # -no-snapshot
     if no_window:
         cmd += " -no-window"
+    if no_snapshot_load:
+        cmd += " -no-snapshot-load"
+    if no_snapshot:
+        cmd += " -no-snapshot"
     # os.system(cmd)
     subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     e_name = 'emulator-' + str(port)
@@ -138,6 +141,7 @@ def select_available_port():
     sock.close()
     return port
 
+
 def close_all_android_emulators():
     output = subprocess.check_output([ADB, 'devices']).decode('utf-8')
     emulator_devices = [line.split('\t')[0] for line in output.split('\n') if 'emulator' in line]
@@ -145,7 +149,7 @@ def close_all_android_emulators():
         subprocess.run([ADB, '-s', device, 'emu', 'kill'])
 
 
-def check_and_install_android_image(system_image = "system-images;android-30;google_apis_playstore;x86"):
+def check_and_install_android_image(system_image="system-images;android-30;google_apis_playstore;x86"):
     if not shutil.which("sdkmanager"):
         print("Error: sdkmanager not found. Ensure Android SDK is installed and added to PATH.")
         return
@@ -160,4 +164,3 @@ def check_and_install_android_image(system_image = "system-images;android-30;goo
     subprocess.run(["sdkmanager", system_image], shell=True, check=True)
 
     subprocess.run('yes | sdkmanager --licenses', shell=True, check=True)
-
