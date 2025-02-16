@@ -11,14 +11,17 @@ ADB = '"' + os.path.join(ANDROID_HOME, 'platform-tools/adb.exe') + '"'
 EMULATOR = '"' + os.path.join(ANDROID_HOME, 'emulator/emulator.exe') + '"'
 AVD_PATH = os.path.join(HOME, '.android/avd')
 
+logging.debug(f'ADB: {ADB}')
+logging.debug(f'EMULATOR: {EMULATOR}')
+logging.debug(f'AVD_PATH: {AVD_PATH}')
+logging.debug(f'ANDROID_HOME: {ANDROID_HOME}')
 
-# print(f'ANDROID_HOME: {ANDROID_HOME}')
-# print(f'ADB: {ADB}')
-# print(f'EMULATOR: {EMULATOR}')
-# print(f'AVD_PATH: {AVD_PATH}')
+
+# ADB = 'adb'
+# EMULATOR = 'emulator'
 
 
-def clone_device(avd_name, src_avd_path='./resources/denet.avd', target='android-28'):
+def clone_device(avd_name: str, src_avd_path='./resources/denet.avd', target='android-28'):
     clone_avd_path = f'./devices/{avd_name}'
     logging.info(f'Cloning device ---- {avd_name} --- ...')
 
@@ -52,7 +55,7 @@ target={target}
     logging.info(f'Cloning done --- {avd_name}')
 
 
-def delete_device(device_name):
+def delete_device(device_name: str):
     try:
         logging.info(f'Deleting device {device_name}...')
         shutil.rmtree(f'./devices/{device_name}')
@@ -63,6 +66,7 @@ def delete_device(device_name):
 
 
 def get_connected_devices():
+    """Returns a list of connected Android devices."""
     devices = os.popen(f'{ADB} devices').read().splitlines()[1:]  # Bỏ qua dòng đầu tiên
     return [device.split()[0] for device in devices if device.strip()]
 
@@ -85,7 +89,8 @@ def close_android(device_name):
     time.sleep(1)
 
 
-def boot_device(avd_name, port=None, no_window=False, memory=4096, cores=2, no_snapshot=False, no_snapshot_load=True,
+def boot_device(avd_name, port=None, no_window=False, memory=4096, cores=2, snapshot_name=None, no_snapshot=False,
+                no_snapshot_load=True,
                 timeout=300):
     """
     Boot android device
@@ -102,6 +107,8 @@ def boot_device(avd_name, port=None, no_window=False, memory=4096, cores=2, no_s
         cmd += " -no-snapshot-load"
     if no_snapshot:
         cmd += " -no-snapshot"
+    if snapshot_name:
+        cmd += f" -snapshot {snapshot_name}"
     # os.system(cmd)
     subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     e_name = 'emulator-' + str(port)
@@ -119,7 +126,8 @@ def boot_device(avd_name, port=None, no_window=False, memory=4096, cores=2, no_s
 def wait_for_emulator(emulator_name, timeout=300):
     logging.info(f"Waiting for {emulator_name} to be ready...")
 
-    subprocess.run([ADB, "wait-for-device"])
+    # subprocess.run([ADB, "wait-for-device"])
+    
     start_at = time.time()
     while time.time() - start_at < timeout:
         result = subprocess.run([ADB, "-s", emulator_name, "shell", "getprop", "sys.boot_completed"],
@@ -164,3 +172,40 @@ def check_and_install_android_image(system_image="system-images;android-30;googl
     subprocess.run(["sdkmanager", system_image], shell=True, check=True)
 
     subprocess.run('yes | sdkmanager --licenses', shell=True, check=True)
+
+
+def list_snapshots(avd_name):
+    """Returns a list of available snapshots for the given AVD."""
+    try:
+        # Run the adb command to list snapshots
+        result = subprocess.run(
+            ["adb", "-s", avd_name, "emu", "avd", "snapshot", "list"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+
+        snapshots = result.stdout.strip().split("\n")
+        snapshots = [snap.strip() for snap in snapshots if snap.strip()]
+
+        return snapshots
+
+    except subprocess.CalledProcessError as e:
+        print(f"Error fetching snapshots: {e}")
+        return []
+
+
+def make_snapshot(device_name, snapshot_name):
+    """Make snapshot of device
+    Args:
+        device_name:
+        snapshot_name:
+    Returns:
+        snapshot name
+    """
+    os.system(f"{ADB} -s {device_name} emu avd snapshot save {snapshot_name}")
+    return snapshot_name
+
+
+def delete_snapshot(device_name, snapshot_name):
+    os.system(f"{ADB} -s {device_name} emu avd snapshot delete {snapshot_name}")

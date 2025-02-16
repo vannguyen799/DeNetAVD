@@ -2,7 +2,6 @@ import logging
 import os
 import random
 import string
-import subprocess
 import time
 
 from appium import webdriver
@@ -13,7 +12,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from android_devices_processing import clear_app_data, clone_device, boot_device, close_android, \
-    check_and_install_android_image, get_connected_devices
+    get_connected_devices
 
 ##########################################################
 DEFAULT_ANDROID_AVD = r'C:\Users\Veer 2\.android\avd\Medium_Phone_API_28.avd'
@@ -40,6 +39,7 @@ HEADLESS = False
 os.makedirs(LOG_PATH, exist_ok=True)
 os.makedirs(DEVICE_PATH, exist_ok=True)
 
+
 def check_appium_server():
     import requests
     try:
@@ -47,9 +47,23 @@ def check_appium_server():
         return True
     except requests.exceptions.ConnectionError:
         pass
+
+
 def generate_password(length=9):
-    characters = string.ascii_letters + string.digits  # Uppercase, lowercase, and numbers
-    return ''.join(random.choices(characters, k=length))
+    if length < 3:
+        raise ValueError("Password length must be at least 3 to include all required character types.")
+
+    uppercase = random.choice(string.ascii_uppercase)
+    lowercase = random.choice(string.ascii_lowercase)
+    digit = random.choice(string.digits)
+
+    other_chars = random.choices(string.ascii_letters + string.digits, k=length - 3)
+
+    password = list(uppercase + lowercase + digit + ''.join(other_chars))
+    random.shuffle(password)
+
+    return ''.join(password)
+
 
 def initialize_driver(device_name):
     capabilities = dict(
@@ -58,8 +72,8 @@ def initialize_driver(device_name):
         deviceName=device_name,
         enforceXPath1=True,  # Fixes accessibility issues
         newCommandTimeout=300,  # Prevents session timeout
-        uiautomator2ServerLaunchTimeout=90*1000,  # Increases UIAutomator2 startup time
-        uiautomator2ServerInstallTimeout=120*1000,  # Increases UIAutomator2 installation time
+        uiautomator2ServerLaunchTimeout=90 * 1000,  # Increases UIAutomator2 startup time
+        uiautomator2ServerInstallTimeout=120 * 1000,  # Increases UIAutomator2 installation time
         disableWindowAnimation=True,  # Reduces lag
     )
     # appium_server_url = 'http://localhost:4723/wd/hub'
@@ -80,7 +94,7 @@ def load_device_by_account(account: str):
 
     avd_name = avd_name_from_acc(account)
     clone_device(avd_name, src_avd_path=DEFAULT_ANDROID_AVD, target=ANDROID_TARGET)
-    return boot_device(avd_name,memory=int(ANDROID_RAM * 1024), cores=ANDROID_CORES, timeout=ANDROID_BOOT_TIMEOUT)
+    return boot_device(avd_name, memory=int(ANDROID_RAM * 1024), cores=ANDROID_CORES, timeout=ANDROID_BOOT_TIMEOUT)
 
 
 class DeNetTool:
@@ -108,9 +122,9 @@ class DeNetTool:
             clear_app_data(self.device_name, package_name)
         account = self.account
         try:
-            logging.info( f"Running Account: {account}")
+            logging.info(f"Running Account: {account}")
             email, password, code = account.split(":", 2)  # Tách email, password và code
-            password= password or generate_password(length=9)
+            password = password or generate_password(length=9)
 
             time.sleep(5)
             self.driver.press_keycode(3)  # Keycode 3 là Home button
@@ -261,6 +275,8 @@ class DeNetTool:
         end_y = screen_size['height'] * 0.2
         self.driver.swipe(start_x, start_y, start_x, end_y, 800)
         print("Cuộn lên thành công.")
+
+
 # Hàm để lấy tài khoản từ Google Sheets
 def get_accounts_from_txt():
     accounts = []
@@ -279,6 +295,8 @@ def get_accounts_from_txt():
 
 def avd_name_from_acc(account):
     return account.split(":")[0] + '.avd'
+
+
 def try_claim(driver: WebDriver):
     try:
         Click_fieldx = WebDriverWait(driver, DEFAULT_ELEMENT_TIMEOUT).until(
@@ -299,11 +317,14 @@ def try_claim(driver: WebDriver):
 
     except Exception as e:
         pass
+
+
 def save_last_timestamp(acc, last_timestamp):
     account_processing_in4[acc] = last_timestamp
 
-    with open(os.path.join(LOG_PATH,  f'{avd_name_from_acc(acc)}_last_timestamp.txt'), 'w') as file:
+    with open(os.path.join(LOG_PATH, f'{avd_name_from_acc(acc)}_last_timestamp.txt'), 'w') as file:
         file.write(str(last_timestamp))
+
 
 def last_timestamp_of(acc):
     timestamp_file = os.path.join(LOG_PATH, f'{avd_name_from_acc(acc)}_last_timestamp.txt')
@@ -317,6 +338,7 @@ def last_timestamp_of(acc):
 
     account_processing_in4[acc] = last_timestamp
     return last_timestamp
+
 
 # Hàm chạy công cụ với danh sách tài khoản
 def run_tool(accounts):
@@ -341,12 +363,10 @@ def run_tool(accounts):
                         denet.tearDown()
                 except Exception as e:
                     logging.error(f'Account err: {account} {e}')
-            time.sleep(5) # small sleep for prev close android timeout
+            time.sleep(5)  # small sleep for prev close android timeout
 
         logging.info(f"Waiting for {SLEEP_CHECK} seconds...")
         time.sleep(SLEEP_CHECK)
-
-
 
 
 def main():
@@ -373,9 +393,6 @@ def main():
         run_tool(accounts)
     except Exception as e:
         logging.error(f"Error all: {e}")
-
-
-
 
 
 if __name__ == "__main__":
