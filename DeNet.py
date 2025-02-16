@@ -110,8 +110,11 @@ class DeNetTool:
         self.driver = initialize_driver(self.device_name)
 
     def tearDown(self) -> None:
-        if self.driver:
-            self.driver.quit()
+        try:
+            if self.driver:
+                self.driver.quit()
+        except Exception as e:
+            pass
         if not ONE_DEVICE_MODE:
             close_android(self.device_name)
 
