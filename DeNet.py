@@ -261,51 +261,6 @@ class DeNetTool:
         end_y = screen_size['height'] * 0.2
         self.driver.swipe(start_x, start_y, start_x, end_y, 800)
         print("Cuộn lên thành công.")
-
-def save_last_timestamp(acc, last_timestamp):
-    account_processing_in4[acc] = last_timestamp
-
-    with open(os.path.join(LOG_PATH,  f'{avd_name_from_acc(acc)}_last_timestamp.txt'), 'w') as file:
-        file.write(str(last_timestamp))
-
-def last_timestamp_of(acc):
-    last_timestamp=0
-    with open(os.path.join(LOG_PATH,  f'{avd_name_from_acc(acc)}_last_timestamp.txt'), 'w') as file:
-        if os.path.getsize(file.name) == 0:
-            file.write(str(last_timestamp))
-        else:
-            last_timestamp = int(file.read())
-
-    account_processing_in4[acc] = last_timestamp
-    return last_timestamp
-# Hàm chạy công cụ với danh sách tài khoản
-def run_tool(accounts):
-    global account_processing_in4
-    for acc in accounts:
-        account_processing_in4[acc] = last_timestamp_of(acc)
-
-    while True:
-        for account, last_timestamp in account_processing_in4.items():
-            if time.time() - last_timestamp > ACCOUNT_CLAIM_SLEEP:
-                try:
-                    save_last_timestamp(account, time.time())
-                    denet = DeNetTool()
-                    denet.account = account
-                    try:
-                        denet.setUp()
-                        denet.test_open_tiktok()
-                    except Exception as e:
-                        logging.error(f'Account err: {account} {e}')
-                    finally:
-                        denet.tearDown()
-                except Exception as e:
-                    logging.error(f'Account err: {account} {e}')
-            time.sleep(5) # small sleep for prev close android timeout
-
-        logging.info(f"Waiting for {SLEEP_CHECK} seconds...")
-        time.sleep(SLEEP_CHECK)
-
-
 # Hàm để lấy tài khoản từ Google Sheets
 def get_accounts_from_txt():
     accounts = []
@@ -324,6 +279,74 @@ def get_accounts_from_txt():
 
 def avd_name_from_acc(account):
     return account.split(":")[0] + '.avd'
+def try_claim(driver: WebDriver):
+    try:
+        Click_fieldx = WebDriverWait(driver, DEFAULT_ELEMENT_TIMEOUT).until(
+            EC.presence_of_element_located((AppiumBy.XPATH,
+                                            '//android.widget.TextView[@text="Turn on" or contains(@text,"LAUNCH TO EARN") or contains(@text,"CHARGE REQUIRED")]'))
+        )
+        if Click_fieldx.text == 'Turn on':
+            Click_fieldx.click()
+            time.sleep(5)
+            Click_fieldx = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((AppiumBy.XPATH,
+                                                '//android.widget.TextView[contains(@text,"LAUNCH TO EARN")]'))
+            )
+
+        if 'CHARGE REQUIRED' not in Click_fieldx.text:
+            Click_fieldx.click()
+            time.sleep(10)
+
+    except Exception as e:
+        pass
+def save_last_timestamp(acc, last_timestamp):
+    account_processing_in4[acc] = last_timestamp
+
+    with open(os.path.join(LOG_PATH,  f'{avd_name_from_acc(acc)}_last_timestamp.txt'), 'w') as file:
+        file.write(str(last_timestamp))
+
+def last_timestamp_of(acc):
+    timestamp_file = os.path.join(LOG_PATH, f'{avd_name_from_acc(acc)}_last_timestamp.txt')
+    last_timestamp = 0
+    if os.path.exists(timestamp_file) and os.path.getsize(timestamp_file) > 0:
+        with open(timestamp_file, 'r') as file:
+            last_timestamp = float(file.read().strip())
+    else:
+        with open(timestamp_file, 'w') as file:
+            file.write(str(last_timestamp))
+
+    account_processing_in4[acc] = last_timestamp
+    return last_timestamp
+
+# Hàm chạy công cụ với danh sách tài khoản
+def run_tool(accounts):
+    global account_processing_in4
+    for acc in accounts:
+        account_processing_in4[acc] = last_timestamp_of(acc)
+
+    while True:
+        for account, last_timestamp in account_processing_in4.items():
+            if time.time() - last_timestamp > ACCOUNT_CLAIM_SLEEP:
+                try:
+                    denet = DeNetTool()
+                    denet.account = account
+                    try:
+                        denet.setUp()
+                        save_last_timestamp(account, time.time())
+
+                        denet.test_open_tiktok()
+                    except Exception as e:
+                        logging.error(f'DeNetTool err: {account} {e}')
+                    finally:
+                        denet.tearDown()
+                except Exception as e:
+                    logging.error(f'Account err: {account} {e}')
+            time.sleep(5) # small sleep for prev close android timeout
+
+        logging.info(f"Waiting for {SLEEP_CHECK} seconds...")
+        time.sleep(SLEEP_CHECK)
+
+
 
 
 def main():
@@ -352,26 +375,7 @@ def main():
         logging.error(f"Error all: {e}")
 
 
-def try_claim(driver: WebDriver):
-    try:
-        Click_fieldx = WebDriverWait(driver, DEFAULT_ELEMENT_TIMEOUT).until(
-            EC.presence_of_element_located((AppiumBy.XPATH,
-                                            '//android.widget.TextView[@text="Turn on" or contains(@text,"LAUNCH TO EARN") or contains(@text,"CHARGE REQUIRED")]'))
-        )
-        if Click_fieldx.text == 'Turn on':
-            Click_fieldx.click()
-            time.sleep(5)
-            Click_fieldx = WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((AppiumBy.XPATH,
-                                                '//android.widget.TextView[contains(@text,"LAUNCH TO EARN")]'))
-            )
 
-        if 'CHARGE REQUIRED' not in Click_fieldx.text:
-            Click_fieldx.click()
-            time.sleep(10)
-
-    except Exception as e:
-        pass
 
 
 if __name__ == "__main__":

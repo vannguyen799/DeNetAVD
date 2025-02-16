@@ -18,8 +18,7 @@ AVD_PATH = os.path.join(HOME, '.android/avd')
 
 
 def clone_device(avd_name, src_avd_path='./resources/denet.avd', target='android-28'):
-    if not os.path.exists(src_avd_path):
-        raise FileNotFoundError(f'AVD file not found at path: {src_avd_path}')
+
     clone_avd_path = f'./devices/{avd_name}'
     logging.info(f'Cloning device ---- {avd_name} --- ...')
 
@@ -27,24 +26,30 @@ def clone_device(avd_name, src_avd_path='./resources/denet.avd', target='android
         os.makedirs(clone_avd_path)
     if not os.path.exists(clone_avd_path + '/userdata-qemu.img'):
         logging.info('Device not exist, cloning...')
+        if not os.path.exists(src_avd_path):
+            raise FileNotFoundError(f'AVD file not found at path: {src_avd_path}')
         shutil.rmtree(clone_avd_path)
         shutil.copytree(src_avd_path, clone_avd_path)
     else:
         logging.info(f'Device {avd_name} existed')
     logging.info(f'Register ini file for device {avd_name}...')
-    with open(f'{AVD_PATH}/{avd_name}.ini', 'w') as f:
-
-        if f'path={os.path.abspath(clone_avd_path)}' not in f.read():
-            f.write(f"""avd.ini.encoding=UTF-8
+    avd_ini_path = f'{AVD_PATH}/{avd_name}.ini'
+    new_init_content = f"""avd.ini.encoding=UTF-8
 path={os.path.abspath(clone_avd_path)}
 target={target}
-""")
+"""
+
+    if os.path.exists(avd_ini_path):
+        with open(avd_ini_path, 'r') as f:
+            existing_content = f.read()
+    else:
+        existing_content = ""
+
+    if f'path={os.path.abspath(clone_avd_path)}' not in existing_content:
+        with open(avd_ini_path, 'w') as f:
+            f.write(new_init_content)
 
 
-
-    # src = f"{HOME}/.android/adbkey.pub"
-    # dst = f"{clone_avd_path}/data/misc/adb/adb_keys"
-    # shutil.copyfile(src, dst)
 
     logging.info(f'Cloning done --- {avd_name}')
 
@@ -88,6 +93,7 @@ def boot_device(avd_name, port=None, no_window=False, memory=4096, cores=2, time
 
     :return: emulator name
     """
+    logging.info(f"Booting {avd_name}...")
     if port is None:
         port = select_available_port()
     cmd = f"{EMULATOR} -avd {avd_name} -memory {memory} -cores {cores} -port {port} -gpu host -no-boot-anim" #-no-snapshot
