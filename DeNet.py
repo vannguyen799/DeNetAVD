@@ -71,7 +71,7 @@ def load_device_by_account(account: str):
 
 class DeNetTool:
     device_name: str
-    driver: WebDriverc
+    driver: WebDriver
     account: str
 
     def setUp(self) -> None:
