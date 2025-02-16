@@ -66,7 +66,7 @@ def load_device_by_account(account: str):
     return boot_device(avd_name,memory=int(ANDROID_RAM * 1024), cores=ANDROID_CORES)
 
 
-class DenetTool:
+class DeNetTool:
     device_name: str
     driver: WebDriver
     account: str
@@ -86,8 +86,9 @@ class DenetTool:
             close_android(self.device_name)
 
     def test_open_tiktok(self, force=False):
+
         package_name = "pro.denet.storage"
-        if force:
+        if force or ONE_DEVICE_MODE:
             clear_app_data(self.device_name, package_name)
         account = self.account
         try:
@@ -243,7 +244,7 @@ def run_tool(accounts):
     while True:
         for account,last_timestamp in account_processing_in4:
             if time.time() - last_timestamp > ACCOUNT_CLAIM_SLEEP:
-                denet = DenetTool()
+                denet = DeNetTool()
                 denet.account = account
                 try:
                     denet.setUp()
@@ -294,19 +295,14 @@ def main():
 
     try:
         if not check_appium_server():
-            # logging.info("Appium server not running. Starting appium server...")
-            # appium_process = subprocess.Popen(['cmd', '/c', 'appium'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raise Exception("Appium server not running...")
+                raise Exception("Appium server not running...")
         # check_and_install_android_image()
 
         run_tool(accounts)
     except Exception as e:
         logging.error(f"Error all: {e}")
         raise e
-    # finally:
-    #     if appium_process is not None:
-    #         appium_process.kill()
-    #         appium_process.wait()
+
 
 
 

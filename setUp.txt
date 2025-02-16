@@ -1,4 +1,5 @@
 --1 Install Android Studio
+Add ANDROID_HOME and ANDROID_SDK_ROOT to environment variables
 
 --2 Install Appium 2
 npm i -g appium
