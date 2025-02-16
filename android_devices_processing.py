@@ -127,11 +127,15 @@ def wait_for_emulator(emulator_name, timeout=300):
     logging.info(f"Waiting for {emulator_name} to be ready...")
 
     # subprocess.run([ADB, "wait-for-device"])
-    
+
     start_at = time.time()
     while time.time() - start_at < timeout:
-        result = subprocess.run([ADB, "-s", emulator_name, "shell", "getprop", "sys.boot_completed"],
-                                capture_output=True, text=True)
+        try:
+            result = subprocess.run([ADB, "-s", emulator_name, "shell", "getprop", "sys.boot_completed"],
+                                    capture_output=True, text=True, timeout=5)
+        except subprocess.TimeoutExpired:
+            continue
+
         if result.returncode == 0 and result.stdout.strip() == "1":
             logging.info(f"{emulator_name} is ready!")
             return

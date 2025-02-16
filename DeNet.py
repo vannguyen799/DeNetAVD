@@ -348,7 +348,10 @@ def run_tool(accounts):
 
     while True:
         for account, last_timestamp in account_processing_in4.items():
-            if time.time() - last_timestamp > ACCOUNT_CLAIM_SLEEP:
+            now = time.time()
+            if now - last_timestamp > ACCOUNT_CLAIM_SLEEP:
+                logging.info('Account Index: ', accounts.index(account))
+
                 try:
                     denet = DeNetTool()
                     denet.account = account
@@ -363,6 +366,7 @@ def run_tool(accounts):
                         denet.tearDown()
                 except Exception as e:
                     logging.error(f'Account err: {account} {e}')
+                logging.info(f"Done in {int((time.time() - now) / 60)} minutes.")
             time.sleep(5)  # small sleep for prev close android timeout
 
         logging.info(f"Waiting for {SLEEP_CHECK} seconds...")
