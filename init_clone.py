@@ -8,3 +8,9 @@
 # target=android-30""")
 #
 #
+from DeNet import initialize_driver
+from android_devices_processing import get_connected_devices
+
+driver = initialize_driver(get_connected_devices()[0])
+
+driver.quit()

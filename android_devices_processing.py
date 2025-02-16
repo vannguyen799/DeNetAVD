@@ -7,8 +7,8 @@ import time
 
 HOME = str(pathlib.Path.home())
 ANDROID_HOME = os.path.join(HOME, 'AppData/Local/Android/Sdk')
-ADB = os.path.join(ANDROID_HOME, 'platform-tools/adb.exe')
-EMULATOR = os.path.join(ANDROID_HOME, 'emulator/emulator.exe')
+ADB = '"' + os.path.join(ANDROID_HOME, 'platform-tools/adb.exe')+'"'
+EMULATOR = '"' + os.path.join(ANDROID_HOME, 'emulator/emulator.exe') +'"'
 AVD_PATH = os.path.join(HOME, '.android/avd')
 
 # print(f'ANDROID_HOME: {ANDROID_HOME}')
@@ -17,7 +17,7 @@ AVD_PATH = os.path.join(HOME, '.android/avd')
 # print(f'AVD_PATH: {AVD_PATH}')
 
 
-def clone_device(avd_name, src_avd_path='./resources/denet.avd', target='android-30'):
+def clone_device(avd_name, src_avd_path='./resources/denet.avd', target='android-28'):
     if not os.path.exists(src_avd_path):
         raise FileNotFoundError(f'AVD file not found at path: {src_avd_path}')
     clone_avd_path = f'./devices/{avd_name}'
@@ -33,10 +33,14 @@ def clone_device(avd_name, src_avd_path='./resources/denet.avd', target='android
         logging.info(f'Device {avd_name} existed')
     logging.info(f'Register ini file for device {avd_name}...')
     with open(f'{AVD_PATH}/{avd_name}.ini', 'w') as f:
-        f.write(f"""avd.ini.encoding=UTF-8
+
+        if f'path={os.path.abspath(clone_avd_path)}' not in f.read():
+            f.write(f"""avd.ini.encoding=UTF-8
 path={os.path.abspath(clone_avd_path)}
 target={target}
 """)
+
+
 
     # src = f"{HOME}/.android/adbkey.pub"
     # dst = f"{clone_avd_path}/data/misc/adb/adb_keys"

@@ -14,22 +14,25 @@ from android_devices_processing import clear_app_data, clone_device, boot_device
     check_and_install_android_image, get_connected_devices
 
 ##########################################################
-DEFAULT_ANDROID_AVD = './resources/denet.avd'
+DEFAULT_ANDROID_AVD = r'C:\Users\Veer 2\.android\avd\Medium_Phone_API_28.avd'
+ANDROID_TARGET = 'android-28'
 
 DEVICE_PATH = './devices'
 APPIUM_SERVER_URL = 'http://127.0.0.1:4723'
-DEFAULT_ELEMENT_TIMEOUT = 60
+DEFAULT_ELEMENT_TIMEOUT = 200
 ACCOUNT_CLAIM_SLEEP = 60 * 60 * 6  # 6 HOUR
-SLEEP_CHECK = 30 * 60 # 30 MIN
-ANDROID_RAM = 4 # GB
+SLEEP_CHECK = 30 * 60  # 30 MIN
+ANDROID_RAM = 4  # GB
 ANDROID_CORES = 2
-ONE_DEVICE_MODE=False
+ONE_DEVICE_MODE = False
 ##########################################################
 
 account_processing_in4: list[tuple[str, float]] = []  # list(account, last_process_time) )
 
 CLEAR_OLD = False
 HEADLESS = False
+
+
 def check_appium_server():
     import requests
     try:
@@ -62,13 +65,13 @@ def load_device_by_account(account: str):
         return get_connected_devices()[0]
 
     avd_name = avd_name_from_acc(account)
-    clone_device(avd_name, src_avd_path=DEFAULT_ANDROID_AVD)
+    clone_device(avd_name, src_avd_path=DEFAULT_ANDROID_AVD, target=ANDROID_TARGET)
     return boot_device(avd_name,memory=int(ANDROID_RAM * 1024), cores=ANDROID_CORES)
 
 
 class DeNetTool:
     device_name: str
-    driver: WebDriver
+    driver: WebDriverc
     account: str
 
     def setUp(self) -> None:
@@ -77,7 +80,6 @@ class DeNetTool:
         time.sleep(5)
 
         self.driver = initialize_driver(self.device_name)
-
 
     def tearDown(self) -> None:
         if self.driver:
@@ -92,7 +94,7 @@ class DeNetTool:
             clear_app_data(self.device_name, package_name)
         account = self.account
         try:
-            logging.log(logging.INFO, f"Running Account: {account}")
+            logging.info( f"Running Account: {account}")
             email, password, code = account.split(":", 2)  # Tách email, password và code
             time.sleep(1)
             self.driver.press_keycode(3)  # Keycode 3 là Home button
@@ -116,12 +118,13 @@ class DeNetTool:
             time.sleep(5)
 
             passcode_btn = WebDriverWait(self.driver, DEFAULT_ELEMENT_TIMEOUT).until(
-                EC.presence_of_element_located((AppiumBy.XPATH, f'//android.widget.TextView[@text="1" or @text="Continue"]'))
+                EC.presence_of_element_located(
+                    (AppiumBy.XPATH, f'//android.widget.TextView[@text="1" or @text="Continue"]'))
             )
+            logging.info('Open App Success: {}'.format(passcode_btn.text))
+            if passcode_btn.text == 'Continue':
+                logging.info('Importing accounts...')
 
-
-
-            if passcode_btn.text =='Continue':
                 # clear_app_data(self.device_name, package_name)
                 # self.driver.press_keycode(3)  # Keycode 3 là Home button
                 time.sleep(2)
@@ -197,6 +200,7 @@ class DeNetTool:
                     Click_fieldz.click()
                     time.sleep(1)  # Thêm thời gian chờ giữa các lần click nếu cần
             else:
+                logging.info(f'Enter passcode: {code}')
                 for char in code:
                     Click_fieldz = WebDriverWait(self.driver, DEFAULT_ELEMENT_TIMEOUT).until(
                         EC.presence_of_element_located((AppiumBy.XPATH, f'//android.widget.TextView[@text="{char}"]'))
@@ -204,15 +208,16 @@ class DeNetTool:
                     Click_fieldz.click()
                     time.sleep(1)
 
-
                 # FIX WRONG PASSCODE
                 try:
-                    Click_fieldz = WebDriverWait(self.driver, 5).until(
-                        EC.presence_of_element_located((AppiumBy.XPATH, f'//android.widget.TextView[@text="{char}"]'))
+                    Click_fieldz = WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((AppiumBy.XPATH,'//android.widget.TextView[@text="Watcher")]'))
                     )
                 except Exception as e:
-                    Click_fieldz=None
-                if Click_fieldz:
+                    Click_fieldz = None
+                if not Click_fieldz:
+                    logging.info(f'Wrong passcode: RELOGIN')
+                    # return
                     return self.test_open_tiktok(True)
 
             time.sleep(5)
@@ -242,7 +247,7 @@ def run_tool(accounts):
     global account_processing_in4
     account_processing_in4 = [(acc, 0) for acc in accounts]
     while True:
-        for account,last_timestamp in account_processing_in4:
+        for account, last_timestamp in account_processing_in4:
             if time.time() - last_timestamp > ACCOUNT_CLAIM_SLEEP:
                 denet = DeNetTool()
                 denet.account = account
@@ -250,6 +255,8 @@ def run_tool(accounts):
                     denet.setUp()
                     denet.test_open_tiktok()
                 except Exception as e:
+                    logging.error(f'Account err: {account} {e}')
+                finally:
                     denet.tearDown()
         logging.info(f"Waiting for {SLEEP_CHECK} seconds...")
         time.sleep(SLEEP_CHECK)
@@ -291,20 +298,15 @@ def main():
             if subdir not in accounts_name:
                 os.remove(os.path.join(DEVICE_PATH, subdir))
 
-
-
     try:
         if not check_appium_server():
-                raise Exception("Appium server not running...")
+            raise Exception("Appium server not running...")
         # check_and_install_android_image()
 
         run_tool(accounts)
     except Exception as e:
         logging.error(f"Error all: {e}")
         raise e
-
-
-
 
 
 def try_claim(driver: WebDriver):
@@ -330,5 +332,5 @@ def try_claim(driver: WebDriver):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s\t%(message)s')
     main()
