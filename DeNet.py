@@ -1,5 +1,7 @@
 import logging
 import os
+import random
+import string
 import subprocess
 import time
 
@@ -18,6 +20,8 @@ DEFAULT_ANDROID_AVD = r'C:\Users\Veer 2\.android\avd\Medium_Phone_API_28.avd'
 ANDROID_TARGET = 'android-28'
 
 DEVICE_PATH = './devices'
+LOG_PATH = './logs'
+
 APPIUM_SERVER_URL = 'http://127.0.0.1:4723'
 DEFAULT_ELEMENT_TIMEOUT = 200
 ACCOUNT_CLAIM_SLEEP = 60 * 60 * 6  # 6 HOUR
@@ -27,11 +31,13 @@ ANDROID_CORES = 2
 ONE_DEVICE_MODE = False
 ##########################################################
 
-account_processing_in4: list[tuple[str, float]] = []  # list(account, last_process_time) )
+account_processing_in4: dict[str, int] = {}  # list(account, last_process_time) )
 
 CLEAR_OLD = False
 HEADLESS = False
 
+os.makedirs(LOG_PATH, exist_ok=True)
+os.makedirs(DEVICE_PATH, exist_ok=True)
 
 def check_appium_server():
     import requests
@@ -40,13 +46,20 @@ def check_appium_server():
         return True
     except requests.exceptions.ConnectionError:
         pass
-
+def generate_password(length=9):
+    characters = string.ascii_letters + string.digits  # Uppercase, lowercase, and numbers
+    return ''.join(random.choices(characters, k=length))
 
 def initialize_driver(device_name):
     capabilities = dict(
         platformName='Android',
         automationName='UiAutomator2',
         deviceName=device_name,
+        enforceXPath1=True,  # Fixes accessibility issues
+        newCommandTimeout=300,  # Prevents session timeout
+        uiautomator2ServerLaunchTimeout=90*1000,  # Increases UIAutomator2 startup time
+        uiautomator2ServerInstallTimeout=120*1000,  # Increases UIAutomator2 installation time
+        disableWindowAnimation=True,  # Reduces lag
     )
     # appium_server_url = 'http://localhost:4723/wd/hub'
     capabilities_options = UiAutomator2Options().load_capabilities(capabilities)
@@ -96,7 +109,9 @@ class DeNetTool:
         try:
             logging.info( f"Running Account: {account}")
             email, password, code = account.split(":", 2)  # Tách email, password và code
-            time.sleep(1)
+            password= password or generate_password(length=9)
+
+            time.sleep(5)
             self.driver.press_keycode(3)  # Keycode 3 là Home button
             time.sleep(2)
             app_value = WebDriverWait(self.driver, DEFAULT_ELEMENT_TIMEOUT).until(
@@ -209,25 +224,30 @@ class DeNetTool:
                     time.sleep(1)
 
                 # FIX WRONG PASSCODE
-                try:
-                    Click_fieldz = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((AppiumBy.XPATH,'//android.widget.TextView[@text="Watcher")]'))
-                    )
-                except Exception as e:
-                    Click_fieldz = None
-                if not Click_fieldz:
-                    logging.info(f'Wrong passcode: RELOGIN')
-                    # return
-                    return self.test_open_tiktok(True)
+                # try:
+                #     Click_fieldz = WebDriverWait(self.driver, DEFAULT_ELEMENT_TIMEOUT).until(
+                #         EC.presence_of_element_located((AppiumBy.XPATH,'//android.widget.TextView[@text="Watcher")]'))
+                #     )
+                # except Exception as e:
+                #     Click_fieldz = None
+                # if not Click_fieldz:
+                #     logging.info(f'Wrong passcode: RELOGIN')
+                #     # return
+                #     return self.test_open_tiktok(True)
 
             time.sleep(5)
 
             try_claim(driver=self.driver)
 
             print(f"Tài Khoản Đã Turn On {account} ")
+            with open(os.path.join(LOG_PATH, f'{avd_name_from_acc(account)}_last_log.txt'), 'a') as file:
+                file.write(f"OK")
 
         except Exception as e:
             print(f"Lỗi với tài khoản {account}: {e}")
+
+            with open(os.path.join(LOG_PATH, f'{avd_name_from_acc(account)}_last_log.txt'), 'a') as file:
+                file.write(f"Error: {e}")
             # delete_device(account)
             self.tearDown()
             # close_android(self.device_name)
@@ -241,23 +261,46 @@ class DeNetTool:
         self.driver.swipe(start_x, start_y, start_x, end_y, 800)
         print("Cuộn lên thành công.")
 
+def save_last_timestamp(acc, last_timestamp):
+    account_processing_in4[acc] = last_timestamp
 
+    with open(os.path.join(LOG_PATH,  f'{avd_name_from_acc(acc)}_last_timestamp.txt'), 'w') as file:
+        file.write(str(last_timestamp))
+
+def last_timestamp_of(acc):
+    last_timestamp=0
+    with open(os.path.join(LOG_PATH,  f'{avd_name_from_acc(acc)}_last_timestamp.txt'), 'w') as file:
+        if os.path.getsize(file.name) == 0:
+            file.write(str(last_timestamp))
+        else:
+            last_timestamp = int(file.read())
+
+    account_processing_in4[acc] = last_timestamp
+    return last_timestamp
 # Hàm chạy công cụ với danh sách tài khoản
 def run_tool(accounts):
     global account_processing_in4
-    account_processing_in4 = [(acc, 0) for acc in accounts]
+    for acc in accounts:
+        account_processing_in4[acc] = last_timestamp_of(acc)
+
     while True:
-        for account, last_timestamp in account_processing_in4:
+        for account, last_timestamp in account_processing_in4.items():
             if time.time() - last_timestamp > ACCOUNT_CLAIM_SLEEP:
-                denet = DeNetTool()
-                denet.account = account
                 try:
-                    denet.setUp()
-                    denet.test_open_tiktok()
+                    save_last_timestamp(account, time.time())
+                    denet = DeNetTool()
+                    denet.account = account
+                    try:
+                        denet.setUp()
+                        denet.test_open_tiktok()
+                    except Exception as e:
+                        logging.error(f'Account err: {account} {e}')
+                    finally:
+                        denet.tearDown()
                 except Exception as e:
                     logging.error(f'Account err: {account} {e}')
-                finally:
-                    denet.tearDown()
+            time.sleep(5) # small sleep for prev close android timeout
+
         logging.info(f"Waiting for {SLEEP_CHECK} seconds...")
         time.sleep(SLEEP_CHECK)
 
@@ -306,7 +349,6 @@ def main():
         run_tool(accounts)
     except Exception as e:
         logging.error(f"Error all: {e}")
-        raise e
 
 
 def try_claim(driver: WebDriver):
