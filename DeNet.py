@@ -28,7 +28,7 @@ SLEEP_CHECK = 30 * 60  # 30 MIN
 ANDROID_RAM = 8  # GB
 ANDROID_CORES = 4
 ONE_DEVICE_MODE = False
-ANDROID_BOOT_TIMEOUT = 300
+ANDROID_BOOT_TIMEOUT = 3 * 60  # 3 MIN
 ##########################################################
 
 account_processing_in4: dict[str, int] = {}  # list(account, last_process_time) )
@@ -103,7 +103,7 @@ class DeNetTool:
     account: str
 
     def setUp(self) -> None:
-
+        self.device_name = avd_name_from_acc(self.account)
         self.device_name = load_device_by_account(self.account)
         time.sleep(5)
 
@@ -383,8 +383,8 @@ def main():
         print("Không có tài khoản trong Google Sheets.")
         exit(1)
 
-    CLEAR_OLD = input('Clear old device unused (enter 1):') == 1
-    HEADLESS = input('Run headless (enter 1):') == 1
+    CLEAR_OLD = input('Clear old device unused (enter 1):') == '1'
+    HEADLESS = input('Run headless (enter 1):') == '1'
     if CLEAR_OLD:
         accounts_name = [avd_name_from_acc(account) for account in accounts]
         for subdir in [name for name in os.listdir(DEVICE_PATH) if os.path.isdir(os.path.join(DEVICE_PATH, name))]:
