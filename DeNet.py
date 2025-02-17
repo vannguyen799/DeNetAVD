@@ -385,6 +385,8 @@ def main():
 
     CLEAR_OLD = input('Clear old device unused (enter 1):') == '1'
     HEADLESS = input('Run headless (enter 1):') == '1'
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s\t%(message)s')
+
     if CLEAR_OLD:
         accounts_name = [avd_name_from_acc(account) for account in accounts]
         for subdir in [name for name in os.listdir(DEVICE_PATH) if os.path.isdir(os.path.join(DEVICE_PATH, name))]:
@@ -402,5 +404,4 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s\t%(message)s')
     main()
