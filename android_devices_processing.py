@@ -155,9 +155,7 @@ def select_available_port():
 
 
 def close_all_android_emulators():
-    output = subprocess.check_output([ADB, 'devices']).decode('utf-8')
-    emulator_devices = [line.split('\t')[0] for line in output.split('\n') if 'emulator' in line]
-    for device in emulator_devices:
+    for device in get_connected_devices():
         subprocess.run([ADB, '-s', device, 'emu', 'kill'])
 
 

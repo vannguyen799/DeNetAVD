@@ -12,7 +12,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from android_devices_processing import clear_app_data, clone_device, boot_device, close_android, \
-    get_connected_devices
+    get_connected_devices, close_all_android_emulators
 
 ##########################################################
 DEFAULT_ANDROID_AVD = r'C:\Users\Veer 2\.android\avd\Medium_Phone_API_28.avd'
@@ -366,6 +366,10 @@ def run_tool(accounts):
                         logging.error(f'DeNetTool err: {account} {e}')
                     finally:
                         denet.tearDown()
+                        time.sleep(5)
+
+                        close_all_android_emulators()
+
                 except Exception as e:
                     logging.error(f'Account err: {account} {e}')
                 logging.info(f"Done in {int((time.time() - now) / 60)} minutes.")
